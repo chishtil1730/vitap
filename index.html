@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat Drop</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b2a5b;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;cursor:crosshair;display:block}
+  #hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#ffd447;font-size:clamp(1.4rem,5vw,2.6rem);font-weight:800;text-align:center;pointer-events:none;transition:opacity .4s}
+  #count{position:fixed;top:14px;left:16px;color:#cfe0ff;font-size:1rem;font-weight:600}
+  #reset{position:fixed;top:10px;right:12px;padding:8px 14px;border:2px solid #ffd447;background:transparent;color:#ffd447;border-radius:8px;font-weight:700;cursor:pointer}
+  #reset:focus-visible{outline:3px solid #fff}
+  #jai{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transform:scale(.6);transition:opacity .4s,transform .5s cubic-bezier(.2,1.6,.4,1)}
+  #jai.show{opacity:1;transform:scale(1)}
+  #jai span{color:#ffd447;font-weight:900;font-size:clamp(2.6rem,13vw,9rem);letter-spacing:.02em;text-align:center;line-height:1;text-shadow:0 6px 0 #c8102e,0 12px 30px rgba(0,0,0,.6);-webkit-text-stroke:2px #0b2a5b}
+  @media (prefers-reduced-motion:reduce){#jai{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hint">Tap anywhere to drop cats</div>
+<div id="count">Cats: 0</div>
+<button id="reset">Reset</button>
+<div id="jai" aria-live="polite"><span>JAI VIT-AP</span></div>
+<script>
+(function(){
+  var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+  var hint=document.getElementById('hint'),countEl=document.getElementById('count'),jai=document.getElementById('jai');
+  var W,H,dpr,cats=[],THRESHOLD=40,MAX=220;
+  var faces=['🐱','😺','😸','😻','😼','🐈','🐈‍⬛','😹'];
+
+  function resize(){
+    dpr=window.devicePixelRatio||1;W=innerWidth;H=innerHeight;
+    cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize',resize);resize();
+
+  function drop(x,y){
+    hint.style.opacity=0;
+    for(var i=0;i<3;i++){
+      if(cats.length>=MAX)cats.shift();
+      var s=30+Math.random()*26;
+      cats.push({x:x+(Math.random()-.5)*50,y:y+(Math.random()-.5)*20,vx:(Math.random()-.5)*3,vy:0,
+        r:s/2,s:s,a:Math.random()*6.28,va:(Math.random()-.5)*.15,f:faces[Math.random()*faces.length|0]});
+    }
+    check();
+  }
+  function check(){
+    countEl.textContent='Cats: '+cats.length;
+    jai.classList.toggle('show',cats.length>=THRESHOLD);
+  }
+
+  cv.addEventListener('pointerdown',function(e){drop(e.clientX,e.clientY)});
+  document.getElementById('reset').addEventListener('click',function(){
+    cats=[];check();hint.style.opacity=1;
+  });
+
+  function step(){
+    var i,j,a,b,dx,dy,d,o;
+    for(i=0;i<cats.length;i++){
+      a=cats[i];a.vy+=0.45;a.x+=a.vx;a.y+=a.vy;a.a+=a.va;a.vx*=.995;
+      if(a.y+a.r>H){a.y=H-a.r;a.vy*=-.35;a.vx*=.9;a.va*=.8;if(Math.abs(a.vy)<1)a.vy=0}
+      if(a.x-a.r<0){a.x=a.r;a.vx*=-.5}
+      if(a.x+a.r>W){a.x=W-a.r;a.vx*=-.5}
+    }
+    for(i=0;i<cats.length;i++)for(j=i+1;j<cats.length;j++){
+      a=cats[i];b=cats[j];dx=b.x-a.x;dy=b.y-a.y;d=Math.sqrt(dx*dx+dy*dy)||.01;o=a.r+b.r-d;
+      if(o>0){
+        dx/=d;dy/=d;
+        a.x-=dx*o/2;a.y-=dy*o/2;b.x+=dx*o/2;b.y+=dy*o/2;
+        var rv=(b.vx-a.vx)*dx+(b.vy-a.vy)*dy;
+        if(rv<0){var p=rv*.5;a.vx+=p*dx;a.vy+=p*dy;b.vx-=p*dx;b.vy-=p*dy}
+        a.vx*=.99;b.vx*=.99;
+      }
+    }
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    for(var i=0;i<cats.length;i++){
+      var c=cats[i];
+      ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);
+      ctx.font=c.s+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      ctx.fillText(c.f,0,0);ctx.restore();
+    }
+  }
+  (function loop(){step();draw();requestAnimationFrame(loop)})();
+})();
+</script>
+</body>
+</html>
