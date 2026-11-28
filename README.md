@@ -1,1 +1,1 @@
-# VIT-AP UNIVERSITY 
+# VIT-AP
